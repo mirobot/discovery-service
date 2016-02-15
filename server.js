@@ -2,7 +2,13 @@
 //  OpenShift sample Node application
 var express = require('express');
 var fs      = require('fs');
+var ejs = require('ejs');
+var r = require("redis"),
+    redis = r.createClient();
 
+redis.on("error", function (err) {
+  console.log("" + err);
+});
 
 /**
  *  Define the sample application.
@@ -38,20 +44,9 @@ var DiscoveryApp = function() {
    *  Populate the cache.
    */
   self.populateCache = function() {
-    if (typeof self.zcache === "undefined") {
-      self.zcache = { 'index.html': '' };
-    }
-
     //  Local cache for static content.
-    self.zcache['index.html'] = fs.readFileSync('./index.html');
+    self.indexPage = fs.readFileSync('./index.html').toString('utf8');
   };
-
-
-  /**
-   *  Retrieve entry (content) from cache.
-   *  @param {string} key  Key identifying content to retrieve from cache.
-   */
-  self.cache_get = function(key) { return self.zcache[key]; };
 
 
   /**
@@ -89,46 +84,93 @@ var DiscoveryApp = function() {
   /*  ================================================================  */
   
   self.addAddress = function(req, res){
-    res.setHeader('Content-Type', 'text/html');
-    res.send(self.cache_get('index.html') );
+    // store internal address and name in redis under the address key
+    redis.zadd(req.ip, Date.now(), req.query.name + '|' + req.query.internal_addr);
+    res.send(204);
+  }
+  
+  function parseSet(data){
+    var out = [];
+    for(var i = 0; i< data.length; i+= 2){
+      out.push({
+        key: data[i],
+        name: data[i].split('|')[0],
+        address: data[i].split('|')[1],
+        last_seen: Number(data[i+1])
+      });
+    }
+    return out;
+  }
+  
+  function getData(key, cb){
+    redis.zrange(key, 0, -1, 'withscores', function(err, resp) {
+      var data = parseSet(resp);
+      var m = redis.multi();
+      // Filter out devices older than a day
+      var cutoff = Date.now() - (1000 * 60 * 60 * 24);
+      for(var i = data.length - 1; i >= 0; i--){
+        if(data[i].last_seen < cutoff){
+          m.zrem(key, data[i].key);
+          data.splice(i, 1);
+        }
+      };
+      
+      // Filter out devices with the same name in case it's just changed IP address
+      var valid = {};
+      for(var i = data.length - 1; i >= 0; i--){
+        if(valid[data[i].name]){
+          if(valid[data[i].name].last_seen < data[i].last_seen){
+            //delete the other record
+            data.splice(valid[data[i].name].id, 1);
+            m.zrem(key, valid[data[i].name].key);
+            //and put in the new one
+            valid[data[i].name] = data[i];
+            valid[data[i].name].id = i;
+          }else{
+            //delete this record
+            m.zrem(key, data[i].key);
+            data.splice(i, 1);
+          }
+        }else{
+          valid[data[i].name] = data[i];
+        }
+      };
+      
+      m.exec(function(err, replies){
+        data.map(function(el){
+          delete el.key;
+          delete el.id;
+        })
+        cb(err, data);
+      });
+    });
   }
   
   self.discover = function(req, res){
-    console.log(req.ip);
-    res.setHeader('Content-Type', 'text');
-    res.send(req.ip);
-  }
-  
-  /**
-   *  Create the routing table entries + handlers for the application.
-   */
-  self.createRoutes = function() {
-    self.routes = { };
-
-    self.routes['/'] = function(req, res) {
-      if(req.method === 'POST'){
-        self.addAddress(req, res);
+    // Fetch all devices on this network
+    getData(req.ip, function(err, data){
+      if(err){
+        res.send(500);
       }else{
-        self.discover(req, res);
+        res.setHeader('Content-Type', 'text/html');
+        //res.send(ejs.render(self.indexPage, {found: data}));
+        res.send(ejs.render(fs.readFileSync('./index.html').toString('utf8'), {found: data}));
       }
-    };
-  };
-
+    });
+  }
 
   /**
    *  Initialize the server (express) and create the routes and register
    *  the handlers.
    */
   self.initializeServer = function() {
-    self.createRoutes();
     self.app = express();
 
     self.app.set('trust proxy', true);
 
     //  Add handlers for the app (from the routes).
-    for (var r in self.routes) {
-      self.app.get(r, self.routes[r]);
-    }
+    self.app.post('/', function(req, res){ self.addAddress(req, res)});
+    self.app.get('/', function(req, res){ self.discover(req, res)});
   };
 
 
