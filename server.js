@@ -3,8 +3,14 @@
 var express = require('express');
 var fs      = require('fs');
 var ejs = require('ejs');
-var r = require("redis"),
-    redis = r.createClient();
+var r = require("redis");
+
+
+var redis_conf = {
+  host: (process.env.OPENSHIFT_REDIS_HOST || 'localhost'),
+  port: (process.env.OPENSHIFT_REDIS_PORT || 6379)
+}
+var redis = r.createClient(redis_conf);
 
 redis.on("error", function (err) {
   console.log("" + err);
