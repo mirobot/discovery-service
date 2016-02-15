@@ -8,9 +8,11 @@ var r = require("redis");
 
 var redis_conf = {
   host: (process.env.OPENSHIFT_REDIS_HOST || 'localhost'),
-  port: (process.env.OPENSHIFT_REDIS_PORT || 6379)
+  port: (process.env.OPENSHIFT_REDIS_PORT || 6379),
+  password: process.env.REDIS_PASSWORD
 }
 var redis = r.createClient(redis_conf);
+if(redis_conf.password) redis.auth(redis_conf.password);
 
 redis.on("error", function (err) {
   console.log("" + err);
@@ -91,8 +93,13 @@ var DiscoveryApp = function() {
   
   self.addAddress = function(req, res){
     // store internal address and name in redis under the address key
-    redis.zadd(req.ip, Date.now(), req.query.name + '|' + req.query.internal_addr);
-    res.send(204);
+    redis.zadd(req.ip, Date.now(), req.query.name + '|' + req.query.internal_addr, function(err, reply){
+      if(err){
+        res.send(500);
+      }else{
+        res.send(204);
+      }
+    });
   }
   
   function parseSet(data){
@@ -110,6 +117,7 @@ var DiscoveryApp = function() {
   
   function getData(key, cb){
     redis.zrange(key, 0, -1, 'withscores', function(err, resp) {
+      if(err) return cb(err);
       var data = parseSet(resp);
       var m = redis.multi();
       // Filter out devices older than a day
@@ -159,8 +167,7 @@ var DiscoveryApp = function() {
         res.send(500);
       }else{
         res.setHeader('Content-Type', 'text/html');
-        //res.send(ejs.render(self.indexPage, {found: data}));
-        res.send(ejs.render(fs.readFileSync('./index.html').toString('utf8'), {found: data}));
+        res.send(ejs.render(self.indexPage, {found: data}));
       }
     });
   }
