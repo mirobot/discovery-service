@@ -92,8 +92,8 @@ var DiscoveryApp = function() {
   /*  ================================================================  */
   
   self.addAddress = function(req, res){
-    // store internal address and name in redis under the address key
-    redis.zadd(req.ip, Date.now(), req.query.name + '|' + req.query.internal_addr, function(err, reply){
+    // store IP address and name in redis under the address key
+    redis.zadd(req.ip, Date.now(), req.query.name + '|' + req.query.address, function(err, reply){
       if(err){
         res.send(500);
       }else{
@@ -120,8 +120,8 @@ var DiscoveryApp = function() {
       if(err) return cb(err);
       var data = parseSet(resp);
       var m = redis.multi();
-      // Filter out devices older than a day
-      var cutoff = Date.now() - (1000 * 60 * 60 * 24);
+      // Filter out devices older than 60 minutes
+      var cutoff = Date.now() - (1000 * 60 * 60);
       for(var i = data.length - 1; i >= 0; i--){
         if(data[i].last_seen < cutoff){
           m.zrem(key, data[i].key);
