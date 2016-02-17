@@ -43,15 +43,15 @@ function selectMirobot(e){
 
 </head>
 <body>
-<% if(found.length === 0){ %>
+<% if(devices.length === 0){ %>
   No Mirobots found on your network
-<% }else if(found.length === 1){ %>
-  <iframe src="http://<%= found[0].address %>" id="frame"/>
+<% }else if(devices.length === 1){ %>
+  <iframe src="http://<%= devices[0].address %>" id="frame"/>
 <% }else{ %>
   <div id="choose">
   <h1>Choose your Mirobot</h1>
   <ul>
-  <% found.forEach(function(robot){ %>
+  <% devices.forEach(function(robot){ %>
       <li><a href="#<%= robot.name %>" onclick="selectMirobot(event)" data-address="<%= robot.address %>"><%= robot.name %></a></li>
   <% }); %>
   </ul>

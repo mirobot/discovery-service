@@ -160,14 +160,19 @@ var DiscoveryApp = function() {
     });
   }
   
-  self.discover = function(req, res){
+  self.discover = function(req, res, format){
     // Fetch all devices on this network
     getData(req.ip, function(err, data){
       if(err){
         res.send(500);
       }else{
-        res.setHeader('Content-Type', 'text/html');
-        res.send(ejs.render(self.indexPage, {found: data}));
+        if(format === 'html'){
+          res.setHeader('Content-Type', 'text/html');
+          res.send(ejs.render(self.indexPage, {devices: data}));
+        }else if(format === 'json'){
+          res.setHeader('Content-Type', 'application/json');
+          res.send(JSON.stringify({devices: data}));
+        }
       }
     });
   }
@@ -183,7 +188,8 @@ var DiscoveryApp = function() {
 
     //  Add handlers for the app (from the routes).
     self.app.post('/', function(req, res){ self.addAddress(req, res)});
-    self.app.get('/', function(req, res){ self.discover(req, res)});
+    self.app.get('/', function(req, res){ self.discover(req, res, 'html')});
+    self.app.get('/devices.json', function(req, res){ self.discover(req, res, 'json')});
   };
 
 
