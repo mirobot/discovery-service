@@ -185,6 +185,7 @@ var DiscoveryApp = function() {
     self.app = express();
 
     self.app.set('trust proxy', true);
+    self.app.use(express.static('assets'));
 
     //  Add handlers for the app (from the routes).
     self.app.post('/', function(req, res){ self.addAddress(req, res)});

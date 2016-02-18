@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <link rel="icon" href="/favicon.ico">
   <title>Mirobot</title>
   <style>
 
@@ -10,8 +11,9 @@ html, body {
   height: 100%;
   padding: 0;
   margin: 0;
+  font-family: Lucida Sans Unicode, Lucida Grande, sans-serif;
 }
-  
+
 h1{
   margin:0;
 }
@@ -29,34 +31,125 @@ h1{
   height:100%;
 }
 
-  </style>
-  <script type="text/javascript">
-function selectMirobot(e){
-  var el = e.srcElement || e.target;
-  console.log(el);
-  console.log(el.dataset.address);
-  document.querySelector('#frame').src="http://" + el.dataset.address;
-  document.querySelector('#frame').className = '';
-  document.querySelector('#choose').className = 'hidden';
+header{
+  position:fixed;
+  z-index:99999;
+  background:#fff;
+  top:0;
+  left:0;
+  right:0;
+  padding:10px 40px;
+  vertical-align:top;
+  -webkit-box-shadow:0px 0px 12px -4px rgba(0, 0, 0, 0.6);
+  -moz-box-shadow:0px 0px 12px -4px rgba(0, 0, 0, 0.6);
+  box-shadow:0px 0px 12px -4px rgba(0, 0, 0, 0.6);
 }
+#content{
+  padding:90px 40px;
+  background-color:#FAFAFA;
+}
+p{
+  font-size:125%;
+}
+h1{
+  font-size:100%;
+}
+
+ul{
+  margin:0;
+  padding:0;
+}
+li{
+  display:block;
+  width: 244px;
+  display: inline-block;
+  vertical-align: top;
+  background: #FFF;
+  margin:10px;
+  height: 220px;
+  text-align:left;
+  border:3px solid #FAFAFA;
+  -webkit-border-radius: 10px;
+  -moz-border-radius: 10px;
+  border-radius: 10px;
+  -webkit-box-shadow: 0 0 12px 0  rgba(0,0,0,0.4);
+  -moz-box-shadow: 0 0 12px 0  rgba(0,0,0,0.4);
+  box-shadow: 0 0 12px 0 rgba(0,0,0,0.4);
+}
+li .icon{
+  display:block;
+  width:244px;
+  height:150px;
+  -webkit-border-top-left-radius: 10px;
+  -webkit-border-top-right-radius: 10px;
+  -moz-border-radius-topleft: 10px;
+  -moz-border-radius-topright: 10px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
+  background:url('icon.jpg');
+}
+li a{
+  text-decoration:none;
+}
+li h2{
+  font-size: 150%;
+  font-weight:bold;
+  color:#333;
+  padding:5px;
+}
+
+  </style>
+  <script>
+
+var devices = <%- JSON.stringify(devices) %>
+
+function selectMirobot(device){
+  for(var i = 0; i< devices.length; i++){
+    if(devices[i].name === device){
+      document.querySelector('#frame').src="http://" + devices[i].address + '/';
+      document.querySelector('#frame').className = '';
+      document.querySelector('#main').className = 'hidden';
+    }
+  }
+}
+
+function checkURL(){
+  if(window.location.hash){
+    selectMirobot(window.location.hash.replace('#', ''));
+  }
+}
+
+document.addEventListener("DOMContentLoaded", checkURL);
+
   </script>
 
 </head>
 <body>
-<% if(devices.length === 0){ %>
-  No Mirobots found on your network
-<% }else if(devices.length === 1){ %>
+<% if(devices.length === 1){ %>
   <iframe src="http://<%= devices[0].address %>" id="frame"/>
 <% }else{ %>
-  <div id="choose">
-  <h1>Choose your Mirobot</h1>
-  <ul>
-  <% devices.forEach(function(robot){ %>
-      <li><a href="#<%= robot.name %>" onclick="selectMirobot(event)" data-address="<%= robot.address %>"><%= robot.name %></a></li>
-  <% }); %>
-  </ul>
+  <div id="main">
+    <header>
+      <img src="logo.gif" alt="Mirobot" />
+    </header>
+    <div id="content">
+<%   if(devices.length === 0){ %>
+    <p>No Mirobots were found on your network.</p>
+    <p><a href="http://learn.mirobot.io/docs/get-mirobot-on-the-network/">Here's how to get started...</a></p>
+<%   }else{ %>
+    <h1>Choose your Mirobot</h1>
+    <ul>
+    <% devices.forEach(function(robot){ %>
+      <li>
+        <a class="icon" href="#<%= robot.name %>" onclick="selectMirobot('<%= robot.name %>')">&nbsp;</a>
+        <a href="#<%= robot.name %>" onclick="selectMirobot('<%= robot.name %>')"><h2><%= robot.name %></h2></a>
+      </li>
+    <% }); %>
+    </ul>
+    </div>
+<%   } %>
   </div>
-  <iframe src="" id="frame" class="hidden"/>
+  <iframe src="" id="frame" class="hidden"></iframe>
 <% } %>
 </body>
 </html>
