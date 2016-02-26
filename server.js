@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-//  OpenShift sample Node application
+
 var express = require('express');
 var fs      = require('fs');
-var ejs = require('ejs');
-var r = require("redis");
+var ejs     = require('ejs');
+var r       = require("redis");
+var cors    = require('cors');
 
 
 var redis_conf = {
@@ -186,6 +187,7 @@ var DiscoveryApp = function() {
 
     self.app.set('trust proxy', true);
     self.app.use(express.static('assets'));
+    self.app.use(cors());
 
     //  Add handlers for the app (from the routes).
     self.app.post('/', function(req, res){ self.addAddress(req, res)});
